@@ -2,10 +2,17 @@ import cv2
 import numpy as np
 import copy
 
+# Version : 0.3
+# Time    : 2023.04.25.23.55
+# Note    :本次将将迷宫转化为 二维数组的代码需要封装为函数。
+#
+
+
 # Version : 0.2
 # Time    : 2023.04.25.16.53
 # Note    :本次将函数注释完成，部分函数有些问题不应该在函数内更改原图像，同时主函数中将迷宫转化为
-#         二维数组的代码需要封装为函数，后期将所有函数放到一个包内。
+#         二维数组的代码需要封装为函数，有时候程序会莫名其妙崩溃，有可能是应为列表为空后使用cv函数
+#         调用发生崩溃，后期将所有函数放到一个包内。
 
 
 def PreDispose_Img(_img):
@@ -220,19 +227,21 @@ def Identifiy_Color(_img, lower_color, upper_color):
     return _box, _box_poi
 
 
-"""
-    @brief 将迷宫二维矩阵，起终点，宝藏点可视化
-    @param
-        :param1 原图像 
-        :param2 图像的所有轮廓
-    @return
-        :val1 
-        :val2
-        :val3 
-    @note   
-    @raises            异常
-"""
 def DrawImage(_img, _thresh, maze_con, dot_arr, r_box, b_box):
+    """
+        @brief 将二维矩阵迷宫可视化
+        @param
+            :param1 原图像
+            :param2 原图像二值图
+            :param3 迷宫矩阵数组
+            :param4 宝藏点坐标
+            :param5 红色区域
+            :param6 蓝色区域
+        @return
+            :val1 重新绘制的图像
+        @note
+        @raises            异常
+    """
     # 创建遮罩
     mask = np.zeros_like(_thresh)
     if len(r_box)!=0:
@@ -252,6 +261,49 @@ def DrawImage(_img, _thresh, maze_con, dot_arr, r_box, b_box):
     # 将遮罩与原图像相与，得到填充轮廓后的图像
     _res = cv2.bitwise_or(mask, _thresh)
     return _res
+
+
+def Get_MazeMatrixArr(_thresh, _DotArr, rbox_p, bbox_p):
+    """
+        @brief 转换二维迷宫数组，获取对应的宝藏点坐标，获取对应起终点坐标
+        @param
+            :param1 源灰度图
+            :param2 宝藏点像素坐标列表
+            :param3 红色中心点颜色像素坐标
+            :param4 蓝色中心点颜色像素坐标
+        @return
+            :val1   二维迷宫数组
+            :val2   宝藏点坐标
+            :val3   红色蓝色中心坐标
+        @note
+        @raises            异常
+    """
+    _Maze_Matrix = np.zeros((21, 21))
+    # 对二值化图像进行腐蚀和膨胀操作
+    _kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+    _thresh1 = cv2.erode(_thresh,   _kernel, iterations=1)
+    _thresh2 = cv2.dilate(_thresh1, _kernel, iterations=1)
+    _thresh  = cv2.erode( _thresh2, _kernel, iterations=8)
+
+    _line_spacing = 416 // 26  # 画27条垂直线
+    for i in range(21):
+        for j in range(21):
+            x = 78 + i * _line_spacing
+            y = 78 + j * _line_spacing
+            _Maze_Matrix[i][j] = int(not _thresh[x, y])
+
+    _Dot_Poi = [[0] * 2 for i in range(len(DotArr))]
+    _sp = [0, 0]; _ep = [0, 0]
+    for _i in range(len(DotArr)):
+        _Dot_Poi[_i][0] = round((_DotArr[_i][0][0] - 81) / 16)
+        _Dot_Poi[_i][1] = round((_DotArr[_i][0][1] - 81) / 16)
+
+    _sp[0] = round((rbox_p[0] - 80) / 16)
+    _sp[1] = round((rbox_p[1] - 80) / 16)
+    _ep[0] = round((bbox_p[0] - 80) / 16)
+    _ep[1] = round((bbox_p[1] - 80) / 16)
+    _cp = [_sp, _ep]
+    return _Maze_Matrix, _Dot_Poi, _cp
 
 
 def draw_maze(maze, pox, color_p):
@@ -324,10 +376,6 @@ if __name__ == "__main__":
             contours, hierarchy, thresh, edges = PreDispose_Img(img_copy)
             img_copy, Poi_Arr = Identify_LocalPoi(img_copy, contours, hierarchy)
 
-            # # 读取帧率属性
-            # fps = cap.get(cv2.CAP_PROP_FPS)
-            # print(fps)
-            # 显示图像
             cv2.imshow('Video', img_copy)
             if len(Poi_Arr) >= 4:
                 break
@@ -346,52 +394,12 @@ if __name__ == "__main__":
         red_arr, red_boxP = Identifiy_Color(img_copy, lc_red, uc_red)
         lc_blue = (100,84, 54); uc_blue = (140, 255, 255)
         blue_arr, blue_boxP = Identifiy_Color(img_copy, lc_blue, uc_blue)
-
+        if len(red_boxP) == 0 or len(blue_boxP) == 0: continue
         thresh = DrawImage(img_copy, thresh, MazeCon, DotArr, red_arr, blue_arr)
 
-        # 对二值化图像进行腐蚀和膨胀操作
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-        thresh = cv2.erode(thresh, kernel, iterations = 1)
-        thresh = cv2.dilate(thresh, kernel, iterations= 1)
-        thresh = cv2.erode(thresh, kernel, iterations = 8)
+        Maze_Matrix, DotPo, RBPoi = Get_MazeMatrixArr(thresh, DotArr, red_boxP, blue_boxP)
+        draw_maze(Maze_Matrix, DotPo, RBPoi)
 
-
-        if len(red_boxP)==0 or len(blue_boxP)==0: continue
-        line_spacing = 416 // 26
-        # 画27条垂直线
-        Maze_Matrix = np.zeros((21, 21))
-        for i in range(0, 21):
-            x = 84 + i * line_spacing - 5
-            for j in range (0, 21):
-                y = 84 + j * line_spacing - 5
-                cv2.circle(img_copy, [x, y], 1, (0,255,255), -1)
-                pixel_value = thresh[x, y]
-                if pixel_value == 0:
-                    Maze_Matrix[i][j] = 1
-                else:
-                    Maze_Matrix[i][j] = 0
-
-        po = [[0] * 2 for i in range(len(DotArr))]
-        for i in range(len(DotArr)):
-            po[i][0] = round((DotArr[i][0][0] - 81) / 16)
-            po[i][1] = round((DotArr[i][0][1] - 81) / 16)
-            print(po[i],end=' ')
-        print("\n")
-        for i in range(0, 21):
-            for j in range(0, 21):
-                print("%d" %Maze_Matrix[i][j],end = ' ')
-            print("")
-        print("\n")
-        start_P = [0,0]; end_P = [0,0]
-        cv2.circle(img_copy, red_boxP, 1, (0, 255, 255), -1)
-        cv2.circle(img_copy, blue_boxP, 1, (0, 255, 255), -1)
-        start_P[0] = round((red_boxP[0]  - 80) / 16)
-        start_P[1] = round((red_boxP[1]  - 80) / 16)
-        end_P[0]   = round((blue_boxP[0] - 80) / 16)
-        end_P[1]   = round((blue_boxP[1] - 80) / 16)
-        cp = [start_P , end_P]
-        print(cp,"\n")
-        draw_maze(Maze_Matrix, po, cp)
 
         cv2.imshow('Video', img_copy)
         cv2.imshow('thresh', thresh)
@@ -414,3 +422,17 @@ if __name__ == "__main__":
 # rgb_img[:, :, 0] = thresh
 # rgb_img[:, :, 1] = thresh
 # rgb_img[:, :, 2] = thresh
+
+
+# print("\n")
+# for i in range(0, 21):
+#     for j in range(0, 21):
+#         print("%d" % Maze_Matrix[i][j], end=' ')
+#     print("")
+# print("\n")
+
+# cv2.circle(img_copy, red_boxP, 1, (0, 255, 255), -1)
+# cv2.circle(img_copy, blue_boxP, 1, (0, 255, 255), -1)
+# cp = [start_P, end_P]
+# print(cp, "\n")
+# draw_maze(Maze_Matrix, po, cp)
