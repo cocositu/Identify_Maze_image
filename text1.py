@@ -2,18 +2,25 @@ import cv2
 import numpy as np
 import copy
 
+# Version : 0.2
+# Time    : 2023.04.25.16.53
+# Note    :本次将函数注释完成，部分函数有些问题不应该在函数内更改原图像，同时主函数中将迷宫转化为
+#         二维数组的代码需要封装为函数，后期将所有函数放到一个包内。
 
-"""
-    @brief 预处理图片，对原图像进行腐蚀膨胀，转化为灰度，二值化， 边缘检测以及寻找轮廓
-    @param
-        :param1 image 要处理的图片
-    @return
-        :val2   _contours 轮廓
-        :val3   _hierarchy 轮廓层次结构
-    @note              备注
-    @raises            异常
-"""
+
 def PreDispose_Img(_img):
+    """
+        @brief 预处理图片，对原图像进行腐蚀膨胀，转化为灰度，二值化， 边缘检测以及寻找轮廓
+        @param
+            :param1 image 要处理的图片
+        @return
+            :val1   _contours  轮廓
+            :val2   _hierarchy 轮廓层次结构
+            :val3   _thresh    二值化图
+            :val4   _edges     边缘检测图
+        @note              备注
+        @raises            异常
+    """
     _gray = cv2.cvtColor(_img, cv2.COLOR_BGR2GRAY)
     _, _thresh = cv2.threshold(_gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     # 消除噪声
@@ -29,59 +36,67 @@ def PreDispose_Img(_img):
     #cv2.imshow('th', thresh)
     return _contours, _hierarchy, _thresh, _edges
 
-"""
-    @brief 求轮廓的中心点坐标
-    @param
-        :param1 _contours 
-    @return
-        :val1   _cx 
-        :val2   _cy 
-    @note   使用一阶矩除以面积得到中心点坐标
-    @raises            异常
-"""
+
 def Cmp_CentPos(_contours):
-    """计算轮廓中心点"""
+    """
+        @brief 求轮廓的中心点坐标
+        @param
+            :param1 _contours  一个图形的轮廓
+        @return
+            :val1   _cx         轮廓中心点x坐标
+            :val2   _cy         轮廓中心点y坐标
+        @note   使用一阶矩除以面积得到中心点坐标
+        @raises            异常
+    """
     M = cv2.moments(_contours)
     _cx = int(M['m10'] / M['m00'])
     _cy = int(M['m01'] / M['m00'])
     return _cx, _cy
 
-"""
-    @brief 重新排序定位点坐标
-    @param
-        :param1 pos_arr 定位点坐标数组
-    @return
-        :val1   points_arr 顺时针排序后的定位点坐标数组
-    @note   
-    @raises            异常
-"""
+
 def Sort_PositPoi(pos_arr):
-    s=[]; diff=[]
+    """
+        @brief 重新排序定位点坐标
+        @param
+            :param1 pos_arr    定位点坐标数组
+        @return
+            :val1   points_arr 顺时针排序后的定位点坐标数组
+        @note
+        @raises            异常
+    """
+    s = []
+    diff = []
     for _i in range(4):
         s.append(pos_arr[_i][0] + pos_arr[_i][1])
         diff.append(pos_arr[_i][0] - pos_arr[_i][1])
     # 对矩形框的顶点坐标按照顺时针方向排序
-    s_min = np.argmin(s); d_min = np.argmin(diff)
-    s_max = np.argmax(s); d_max = np.argmax(diff)
+    s_min = np.argmin(s)
+    d_min = np.argmin(diff)
+    s_max = np.argmax(s)
+    d_max = np.argmax(diff)
     points_arr = np.array([pos_arr[s_min], pos_arr[d_min], pos_arr[s_max], pos_arr[d_max]])
     return points_arr
 
 
-
-"""
-    @brief 
-    @param
-        :param1 
-    @return
-        :val1  
-    @note   
-    @raises            异常
-"""
+##这个函数需要修改，传入的原图像尽量不要去修改
 def Identify_LocalPoi(_img, _contours, _hierarchy):
+    """
+        @brief  在图像中找出四个定位点
+        @param
+            :param1 原图像
+            :param2 图像中所有轮廓
+            :param3 轮廓的层次结构
+        @return
+            :val1   标注好四个定位后的图像
+            :val2   四个定位点的中心坐标
+        @note
+        @raises            异常
+    """
     LocPo_Num = 0; PosPoi = []
     for _i in range(len(_contours)):
         # d1一级嵌套， d2二级嵌套
-        d1 = _hierarchy[0][_i][2]; d2 = _hierarchy[0][d1][2]
+        d1 = _hierarchy[0][_i][2]
+        d2 = _hierarchy[0][d1][2]
 
         _perimeter = cv2.arcLength(_contours[_i], True)
         _approx = cv2.approxPolyDP(_contours[_i], 0.05 * _perimeter, True)
@@ -102,16 +117,19 @@ def Identify_LocalPoi(_img, _contours, _hierarchy):
 
     return _img, PosPoi
 
-"""
-    @brief 
-    @param
-        :param1 
-    @return
-        :val1  
-    @note   
-    @raises            异常
-"""
+
 def Transf_Image(_img, img_point):
+    """
+        @brief  通过四个定位点坐标去矫正图像
+        @param
+            :param1  原图像
+            :param2  四个定位点坐标
+        @return
+            :val1
+        @note       使用透视矩阵变换，图片转换成500x500像素大小的图片，
+                    四个定位点坐标分别为[30, 30], [30, 446], [446, 446], [446, 30]
+        @raises            异常
+    """
     # 设置矩形的四个角点坐标
     src_points = np.float32(img_point)
     # 计算矩形的理论形状（假设为正方形）
@@ -122,16 +140,19 @@ def Transf_Image(_img, img_point):
     rec_img = cv2.warpPerspective(_img, M, (476, 476), borderMode=cv2.BORDER_CONSTANT, borderValue=[255, 255, 255])
     return rec_img
 
-"""
-    @brief 
-    @param
-        :param1 
-    @return
-        :val1  
-    @note   
-    @raises            异常
-"""
+
 def Recognize_Dot(_img, _contours):
+    """
+        @brief 找出迷宫外轮廓，八个宝藏的轮廓和坐标
+        @param
+            :param1 原图像
+            :param2 图像的所有轮廓
+        @return
+            :val1   迷宫外轮廓
+            :val2   八个宝藏点构成的列表[[迷宫坐标],半径]
+        @note
+        @raises            异常
+    """
     maze_bag = copy.deepcopy(_contours)
     Dot_arr = []
     # 遍历轮廓
@@ -159,7 +180,20 @@ def Recognize_Dot(_img, _contours):
                 # cv2.circle(_img, _center, int(_radius), (0, 0, 255), -1)
     return maze_bag, Dot_arr
 
+
 def Identifiy_Color(_img, lower_color, upper_color):
+    """
+        @brief 通过颜色识别识别出迷宫中的起点终点坐标
+        @param
+            :param1 原图像
+            :param2 hsv颜色下边界
+            :param3 hsv颜色上边界
+        @return
+            :val1   颜色区块的最小外接矩形轮廓 []
+            :val2   颜色最小外接矩形的中心坐标[]
+        @note
+        @raises            异常
+    """
     _box = []; _box_poi = []
     # 将图像转换为HSV颜色空间
     img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
@@ -185,6 +219,19 @@ def Identifiy_Color(_img, lower_color, upper_color):
             break
     return _box, _box_poi
 
+
+"""
+    @brief 将迷宫二维矩阵，起终点，宝藏点可视化
+    @param
+        :param1 原图像 
+        :param2 图像的所有轮廓
+    @return
+        :val1 
+        :val2
+        :val3 
+    @note   
+    @raises            异常
+"""
 def DrawImage(_img, _thresh, maze_con, dot_arr, r_box, b_box):
     # 创建遮罩
     mask = np.zeros_like(_thresh)
@@ -208,6 +255,16 @@ def DrawImage(_img, _thresh, maze_con, dot_arr, r_box, b_box):
 
 
 def draw_maze(maze, pox, color_p):
+    """
+        @brief 找出迷宫外轮廓，八个宝藏的轮廓和坐标
+        @param
+            :param1 迷宫二维数组
+            :param2 宝藏点坐标列表
+            :param3 起终点颜色坐标
+        @return
+        @note
+        @raises            异常
+    """
     # 定义颜色
     wall_color = (0, 0, 0)
     path_color = (255, 255, 255)
@@ -236,18 +293,7 @@ def draw_maze(maze, pox, color_p):
                 y * (cell_size + cell_padding) + cell_padding:y * (cell_size + cell_padding) + cell_padding + cell_size,
                 x * (cell_size + cell_padding) + cell_padding:x * (
                             cell_size + cell_padding) + cell_padding + cell_size] = path_color
-                # if y == 1 and x == 1:
-                #     # 起点
-                #     img[y * (cell_size + cell_padding) + cell_padding:y * (
-                #                 cell_size + cell_padding) + cell_padding + cell_size,
-                #     x * (cell_size + cell_padding) + cell_padding:x * (
-                #                 cell_size + cell_padding) + cell_padding + cell_size] = start_color
-                # elif y == maze_height - 2 and x == maze_width - 2:
-                #     # 终点
-                #     img[y * (cell_size + cell_padding) + cell_padding:y * (
-                #                 cell_size + cell_padding) + cell_padding + cell_size,
-                #     x * (cell_size + cell_padding) + cell_padding:x * (
-                #                 cell_size + cell_padding) + cell_padding + cell_size] = end_color
+
     for p in pox:
         img[p[1] * (cell_size + cell_padding) + cell_padding:(p[1] + 1) * (cell_size + cell_padding),
         p[0] * (cell_size + cell_padding) + cell_padding:(p[0] + 1) * (cell_size + cell_padding)] = v_color
@@ -272,7 +318,7 @@ if __name__ == "__main__":
         while True:
             # 读取一帧图像#读取图像,预处理图像
             _, img = cap.read()
-
+            # img = cv2.imread('image1.jpg')
             img = cv2.resize(img, (640, 480))
             img_copy = img.copy()
             contours, hierarchy, thresh, edges = PreDispose_Img(img_copy)
@@ -309,13 +355,8 @@ if __name__ == "__main__":
         thresh = cv2.dilate(thresh, kernel, iterations= 1)
         thresh = cv2.erode(thresh, kernel, iterations = 8)
 
-        # # 创建空白的RGB图像
-        # rgb_img = np.zeros((thresh.shape[0], thresh.shape[1], 3), np.uint8)
-        # # 将二值图像赋值给RGB图像的三个通道
-        # rgb_img[:, :, 0] = thresh
-        # rgb_img[:, :, 1] = thresh
-        # rgb_img[:, :, 2] = thresh
 
+        if len(red_boxP)==0 or len(blue_boxP)==0: continue
         line_spacing = 416 // 26
         # 画27条垂直线
         Maze_Matrix = np.zeros((21, 21))
@@ -337,7 +378,9 @@ if __name__ == "__main__":
             print(po[i],end=' ')
         print("\n")
         for i in range(0, 21):
-            print(Maze_Matrix[i])
+            for j in range(0, 21):
+                print("%d" %Maze_Matrix[i][j],end = ' ')
+            print("")
         print("\n")
         start_P = [0,0]; end_P = [0,0]
         cv2.circle(img_copy, red_boxP, 1, (0, 255, 255), -1)
@@ -364,3 +407,10 @@ if __name__ == "__main__":
     cap.release()
     cv2.destroyAllWindows()
 
+## 后面可以创建函数使用
+# # 创建空白的RGB图像
+# rgb_img = np.zeros((thresh.shape[0], thresh.shape[1], 3), np.uint8)
+# # 将二值图像赋值给RGB图像的三个通道
+# rgb_img[:, :, 0] = thresh
+# rgb_img[:, :, 1] = thresh
+# rgb_img[:, :, 2] = thresh
