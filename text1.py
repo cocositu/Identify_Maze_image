@@ -1,5 +1,8 @@
 import cv2
+<<<<<<< HEAD
 from matplotlib.dviread import Box
+=======
+>>>>>>> 6d0064c68ac775e1a2a9598cb79b1b921d4edf63
 import numpy as np
 import copy
 
@@ -47,8 +50,13 @@ def PreDispose_Img(_img):
     _edges = cv2.Canny(_blur, 50, 150)
     # 寻找轮廓和层次结构
     _contours, _hierarchy = cv2.findContours(_thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+<<<<<<< HEAD
     # cv2.imshow('th', _thresh)
     return _contours, _thresh, _hierarchy, _edges
+=======
+    #cv2.imshow('th', thresh)
+    return _contours, _hierarchy, _thresh, _edges
+>>>>>>> 6d0064c68ac775e1a2a9598cb79b1b921d4edf63
 
 
 def Cmp_CentPos(_contours):
@@ -106,8 +114,12 @@ def Identify_LocalPoi(_img, _contours, _hierarchy):
         @note
         @raises            异常
     """
+<<<<<<< HEAD
     # LocPo_Num = 0; PosPoi = []; Loc_Box = []
     LocPo_Num, PosPoi,Loc_Box = 0, [], []
+=======
+    LocPo_Num = 0; PosPoi = []
+>>>>>>> 6d0064c68ac775e1a2a9598cb79b1b921d4edf63
     for _i in range(len(_contours)):
         # d1一级嵌套， d2二级嵌套
         d1 = _hierarchy[0][_i][2]
@@ -117,6 +129,7 @@ def Identify_LocalPoi(_img, _contours, _hierarchy):
         _approx = cv2.approxPolyDP(_contours[_i], 0.05 * _perimeter, True)
         _area = cv2.contourArea(_approx)
 
+<<<<<<< HEAD
         if 300 < _area < 1500 and d1 != -1 and d2 != -1:
             LocPo_Num += 1
             # 获取回字定位图案的最小外接矩形
@@ -125,16 +138,31 @@ def Identify_LocalPoi(_img, _contours, _hierarchy):
             # 修复关键行：四舍五入并转换为整数
             _box = cv2.boxPoints(_rect)
             _box = np.round(_box).astype(np.int32)
+=======
+        if 400 < _area < 1500 and d1 != -1 and d2 != -1:
+            LocPo_Num += 1
+            # 获取回字定位图案的最小外接矩形
+            _rect = cv2.minAreaRect(_contours[_i])
+            _box = np.int0(cv2.boxPoints(_rect))
+>>>>>>> 6d0064c68ac775e1a2a9598cb79b1b921d4edf63
 
             # 画出回字定位图案和定位点中心
             cx, cy =  Cmp_CentPos(_contours[_i])
             cv2.drawContours(_img, [_box], 0, (0, 0, 255), 2)
+<<<<<<< HEAD
             # cv2.circle(_img, (cx, cy), 3, (0, 255, 0), -1)
             # 定位点坐标
             PosPoi.append([cx, cy])
             Loc_Box.append([_box])
 
     return  PosPoi, Loc_Box, LocPo_Num
+=======
+            cv2.circle(_img, (cx, cy), 3, (0, 255, 0), -1)
+            # 定位点坐标
+            PosPoi.append([cx, cy])
+
+    return _img, PosPoi
+>>>>>>> 6d0064c68ac775e1a2a9598cb79b1b921d4edf63
 
 
 def Transf_Image(_img, img_point):
@@ -152,11 +180,19 @@ def Transf_Image(_img, img_point):
     # 设置矩形的四个角点坐标
     src_points = np.float32(img_point)
     # 计算矩形的理论形状（假设为正方形）
+<<<<<<< HEAD
     dst_points = np.float32([[30, 30], [30, 449], [449, 449], [449, 30]])
     # 计算变换矩阵
     M = cv2.getPerspectiveTransform(src_points, dst_points)
     # 进行透视变换，边缘使用白色填充
     rec_img = cv2.warpPerspective(_img, M, (479, 479), borderMode=cv2.BORDER_CONSTANT, borderValue=[255, 255, 255])
+=======
+    dst_points = np.float32([[30, 30], [30, 446], [446, 446], [446, 30]])
+    # 计算变换矩阵
+    M = cv2.getPerspectiveTransform(src_points, dst_points)
+    # 进行透视变换，边缘使用白色填充
+    rec_img = cv2.warpPerspective(_img, M, (476, 476), borderMode=cv2.BORDER_CONSTANT, borderValue=[255, 255, 255])
+>>>>>>> 6d0064c68ac775e1a2a9598cb79b1b921d4edf63
     return rec_img
 
 
@@ -172,8 +208,12 @@ def Recognize_Dot(_img, _contours):
         @note
         @raises            异常
     """
+<<<<<<< HEAD
     # maze_bag = copy.deepcopy(_contours)
     maze_bag = []
+=======
+    maze_bag = copy.deepcopy(_contours)
+>>>>>>> 6d0064c68ac775e1a2a9598cb79b1b921d4edf63
     Dot_arr = []
     # 遍历轮廓
     for _i in range(len(_contours)):
@@ -183,13 +223,21 @@ def Recognize_Dot(_img, _contours):
             maze_bag = contours[_i]
             break
     if len(maze_bag) == 0:
+<<<<<<< HEAD
         return maze_bag, 0
+=======
+        return
+>>>>>>> 6d0064c68ac775e1a2a9598cb79b1b921d4edf63
     # 遍历轮廓
     for _contour in _contours:
         # 计算轮廓周长
         _perimeter = cv2.arcLength(_contour, True)
         # 对轮廓进行逼近
+<<<<<<< HEAD
         _approx = cv2.approxPolyDP(_contour, 0.03 * _perimeter, True)
+=======
+        _approx = cv2.approxPolyDP(_contour, 0.02 * _perimeter, True)
+>>>>>>> 6d0064c68ac775e1a2a9598cb79b1b921d4edf63
         _area = cv2.contourArea(_contour)
         if len(_approx) > 4 and 80 < _area < 200:
             _radius = np.sqrt(_area / np.pi)
@@ -235,11 +283,15 @@ def Identifiy_Color(_img, lower_color, upper_color):
             # # 最小外接矩形
             _rect = cv2.minAreaRect(_contour)
             _box_poi = [int(_rect[0][0]), int(_rect[0][1])]
+<<<<<<< HEAD
             # _box = np.int32(cv2.boxPoints(_rect))
             # 修复关键行：四舍五入并转换为整数
             _box = cv2.boxPoints(_rect)
             _box = np.round(_box).astype(np.int32)
 
+=======
+            _box = np.int0(cv2.boxPoints(_rect))
+>>>>>>> 6d0064c68ac775e1a2a9598cb79b1b921d4edf63
             # cv2.drawContours(_img, [_box], 0, (0, 0, 255), 2)
             break
     return _box, _box_poi
@@ -260,6 +312,7 @@ def DrawImage(_img, _thresh, maze_con, dot_arr, r_box, b_box):
         @note
         @raises            异常
     """
+<<<<<<< HEAD
     _line_spacing = 337 / 21  # 画21条垂直线
     for i in range(21):
         for j in range(21):
@@ -267,6 +320,8 @@ def DrawImage(_img, _thresh, maze_con, dot_arr, r_box, b_box):
             y = 79 + round(j * _line_spacing)
             cv2.circle(_img, [x,y], 1, (0, 255, 255), -1)
 
+=======
+>>>>>>> 6d0064c68ac775e1a2a9598cb79b1b921d4edf63
     # 创建遮罩
     mask = np.zeros_like(_thresh)
     if len(r_box) != 0:
@@ -312,6 +367,7 @@ def Get_MazeMatrixArr(_thresh, _DotArr, rbox_p, bbox_p):
     _thresh2 = cv2.dilate(_thresh1, _kernel, iterations=1)
     _thresh  = cv2.erode(_thresh2, _kernel, iterations=8)
 
+<<<<<<< HEAD
     _line_spacing = 337 / 21  # 画21条垂直线
     for i in range(21):
         for j in range(21):
@@ -337,6 +393,40 @@ def Get_MazeMatrixArr(_thresh, _DotArr, rbox_p, bbox_p):
 
 def draw_maze(maze, pox, color_p):
  
+=======
+    _line_spacing = 416 // 26  # 画27条垂直线
+    for i in range(21):
+        for j in range(21):
+            x = 78 + i * _line_spacing
+            y = 78 + j * _line_spacing
+            _Maze_Matrix[i][j] = int(not _thresh[x, y])
+
+    _Dot_Poi = [[0] * 2 for i in range(len(DotArr))]
+    _sp = [0, 0]; _ep = [0, 0]
+    for _i in range(len(DotArr)):
+        _Dot_Poi[_i][0] = round((_DotArr[_i][0][0] - 81) / 16)
+        _Dot_Poi[_i][1] = round((_DotArr[_i][0][1] - 81) / 16)
+
+    _sp[0] = round((rbox_p[0] - 78) / 16)
+    _sp[1] = round((rbox_p[1] - 78) / 16)
+    _ep[0] = round((bbox_p[0] - 78) / 16)
+    _ep[1] = round((bbox_p[1] - 78) / 16)
+    _cp = [_sp, _ep]
+    return _Maze_Matrix, _Dot_Poi, _cp
+
+
+def draw_maze(maze, pox, color_p):
+    """
+        @brief 找出迷宫外轮廓，八个宝藏的轮廓和坐标
+        @param
+            :param1 迷宫二维数组
+            :param2 宝藏点坐标列表
+            :param3 起终点颜色坐标
+        @return
+        @note
+        @raises            异常
+    """
+>>>>>>> 6d0064c68ac775e1a2a9598cb79b1b921d4edf63
     CELL_SIZE = 15
     CELL_PADDING = 3
     WALL_COLOR = (0, 0, 0)
@@ -375,8 +465,13 @@ def draw_maze(maze, pox, color_p):
     for i in range(len(color_p)):
         x = color_p[i][0]
         y = color_p[i][1]
+<<<<<<< HEAD
         x = min(max(x, 0), maze_width  - 1)
         y = min(max(y, 0), maze_height - 1)
+=======
+        x = min(max(x, 1), maze_width  - 1)
+        y = min(max(y, 1), maze_height - 1)
+>>>>>>> 6d0064c68ac775e1a2a9598cb79b1b921d4edf63
         x_start = x * (CELL_SIZE + CELL_PADDING) + CELL_PADDING
         y_start = y * (CELL_SIZE + CELL_PADDING) + CELL_PADDING
         x_end = x_start + CELL_SIZE
@@ -386,7 +481,11 @@ def draw_maze(maze, pox, color_p):
 
 
 if __name__ == "__main__":
+<<<<<<< HEAD
     cap = cv2.VideoCapture(2)  # 0 表示默认的摄像头
+=======
+    cap = cv2.VideoCapture(0)  # 0 表示默认的摄像头
+>>>>>>> 6d0064c68ac775e1a2a9598cb79b1b921d4edf63
     # # 设置帧率属性
     # cap.set(cv2.CAP_PROP_FPS, 60)
 
@@ -394,6 +493,7 @@ if __name__ == "__main__":
         while True:
             # 读取一帧图像#读取图像,预处理图像
             _, img = cap.read()
+<<<<<<< HEAD
             # img = cv2.imread('maze_img.jpg')
             img = cv2.resize(img, (640, 480))
             img_copy = img.copy()
@@ -408,6 +508,15 @@ if __name__ == "__main__":
 
             cv2.imshow('Video', img_copy)
 
+=======
+            # img = cv2.imread('image1.jpg')
+            img = cv2.resize(img, (640, 480))
+            img_copy = img.copy()
+            contours, hierarchy, thresh, edges = PreDispose_Img(img_copy)
+            img_copy, Poi_Arr = Identify_LocalPoi(img_copy, contours, hierarchy)
+
+            cv2.imshow('Video', img_copy)
+>>>>>>> 6d0064c68ac775e1a2a9598cb79b1b921d4edf63
             if len(Poi_Arr) >= 4:
                 break
             # 检测是否按下了 q 键，如果是则退出循环
@@ -418,7 +527,11 @@ if __name__ == "__main__":
         # print(Poi_Arr)
         img = Transf_Image(img, Poi_Arr)
         img_copy = img.copy()
+<<<<<<< HEAD
         contours, thresh, hierarchy, edges = PreDispose_Img(img_copy)
+=======
+        contours, hierarchy, thresh, edges = PreDispose_Img(img_copy)
+>>>>>>> 6d0064c68ac775e1a2a9598cb79b1b921d4edf63
         MazeCon, DotArr = Recognize_Dot(img_copy, contours)
         if len(MazeCon) == 0:
             continue
@@ -429,12 +542,21 @@ if __name__ == "__main__":
         if len(red_boxP) == 0 or len(blue_boxP) == 0:
             continue
         thresh = DrawImage(img_copy, thresh, MazeCon, DotArr, red_arr, blue_arr)
+<<<<<<< HEAD
         Maze_Matrix, DotPo, RBPoi, thresh = Get_MazeMatrixArr(thresh, DotArr, red_boxP, blue_boxP)
         draw_maze(Maze_Matrix, DotPo, RBPoi)
 
         cv2.imshow('Video', img_copy)
         cv2.imshow('Video1', thresh)
        
+=======
+        Maze_Matrix, DotPo, RBPoi = Get_MazeMatrixArr(thresh, DotArr, red_boxP, blue_boxP)
+        draw_maze(Maze_Matrix, DotPo, RBPoi)
+
+        cv2.imshow('Video', img_copy)
+        # cv2.imshow('thresh', thresh)
+
+>>>>>>> 6d0064c68ac775e1a2a9598cb79b1b921d4edf63
         while True:
             if cv2.waitKey(1) == ord('b'):
                 break
@@ -445,3 +567,27 @@ if __name__ == "__main__":
     # 释放摄像头并关闭窗口
     cap.release()
     cv2.destroyAllWindows()
+<<<<<<< HEAD
+=======
+
+# 后面可以创建函数使用
+# # 创建空白的RGB图像
+# rgb_img = np.zeros((thresh.shape[0], thresh.shape[1], 3), np.uint8)
+# # 将二值图像赋值给RGB图像的三个通道
+# rgb_img[:, :, 0] = thresh
+# rgb_img[:, :, 1] = thresh
+# rgb_img[:, :, 2] = thresh
+
+
+# print("\n")
+# for i in range(0, 21):
+#     for j in range(0, 21):
+#         print("%d" % Maze_Matrix[i][j], end=' ')
+#     print("")
+# print("\n")
+
+
+# cp = [start_P, end_P]
+# print(cp, "\n")
+# draw_maze(Maze_Matrix, po, cp)
+>>>>>>> 6d0064c68ac775e1a2a9598cb79b1b921d4edf63
